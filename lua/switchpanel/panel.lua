@@ -385,6 +385,15 @@ function Panel.open(panel)
         log.warn("Failed to setup panel list: %s", list_err)
     end
     
+    -- Always setup mouse event handler after panel is opened
+    -- Use defer_fn to ensure the window is fully loaded before setting up autocmd
+    vim.defer_fn(function()
+        if PanelList.winnr and api.nvim_win_is_valid(PanelList.winnr) then
+            log.debug("Setting up mouse event handler for panel: %s", panel.filetype)
+            pcall(PanelList.setup_autocmd)
+        end
+    end, 100) -- 100ms delay to ensure window is ready
+    
     log.debug("Panel opened successfully: %s", panel.filetype)
     return true
 end
