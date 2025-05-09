@@ -91,15 +91,7 @@ function Panel.switch(number)
         Panel.tabnr = number
         log.debug("Switched to panel %d", number)
         
-        if Panel.active then
-            vim.defer_fn(function()
-                local PanelList = require("switchpanel.panel_list")
-                if PanelList.winnr and api.nvim_win_is_valid(PanelList.winnr) then
-                    log.debug("Apply mouse event handler after NvimTree is opened")
-                    PanelList.setup_autocmd()
-                end
-            end, 50)
-        end
+        -- Removed deferred function call for mouse event setup
         
         return true
     else
@@ -388,11 +380,19 @@ function Panel.open(panel)
     -- Always setup mouse event handler after panel is opened
     -- Use defer_fn to ensure the window is fully loaded before setting up autocmd
     vim.defer_fn(function()
+        log.debug("Deferred function for mouse event setup triggered for panel: %s", panel.filetype)
         if PanelList.winnr and api.nvim_win_is_valid(PanelList.winnr) then
-            log.debug("Setting up mouse event handler for panel: %s", panel.filetype)
-            pcall(PanelList.setup_autocmd)
+            log.debug("Attempting to set up mouse event handler for panel: %s. PanelList.winnr: %s", panel.filetype, tostring(PanelList.winnr))
+            local setup_success, setup_err = pcall(PanelList.setup_autocmd)
+            if setup_success then
+                log.debug("Successfully called PanelList.setup_autocmd for panel: %s", panel.filetype)
+            else
+                log.warn("Failed to call PanelList.setup_autocmd for panel: %s. Error: %s", panel.filetype, tostring(setup_err))
+            end
+        else
+            log.warn("Skipping mouse event setup for panel: %s. PanelList.winnr (%s) is invalid or nil.", panel.filetype, tostring(PanelList.winnr))
         end
-    end, 100) -- 100ms delay to ensure window is ready
+    end, 200) -- Increased delay to 200ms to ensure window is ready
     
     log.debug("Panel opened successfully: %s", panel.filetype)
     return true
