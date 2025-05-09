@@ -90,6 +90,17 @@ function Panel.switch(number)
     if open_success then
         Panel.tabnr = number
         log.debug("Switched to panel %d", number)
+        
+        if Panel.active and Panel.active.filetype == "NvimTree" then
+            vim.defer_fn(function()
+                local PanelList = require("switchpanel.panel_list")
+                if PanelList.winnr and api.nvim_win_is_valid(PanelList.winnr) then
+                    log.debug("Apply mouse event handler after NvimTree is opened")
+                    PanelList.setup_autocmd()
+                end
+            end, 10)
+        end
+        
         return true
     else
         log.error("Failed to open panel %d", number)

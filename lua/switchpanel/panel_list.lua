@@ -130,23 +130,29 @@ function PanelList.setup_autocmd()
         end
     end
     
-    -- Set up left mouse click mapping for the panel list buffer
+    -- Set up left mouse click mapping for the panel list buffer with higher priority
     vim.keymap.set('n', '<LeftMouse>', handle_mouse_click, {
         buffer = PanelList.bufnr,
         noremap = true,
         silent = true,
-        desc = "SwitchPanel: Switch to clicked panel"
+        desc = "SwitchPanel: Switch to clicked panel",
     })
-    
-    -- Double-click for faster switching
+
+    vim.keymap.set('n', '<C-LeftMouse>', handle_mouse_click, {
+        buffer = PanelList.bufnr,
+        noremap = true,
+        silent = true,
+        desc = "SwitchPanel: Switch to clicked panel",
+    })
+    -- Double-click for faster switching with higher priority
     vim.keymap.set('n', '<2-LeftMouse>', handle_mouse_click, {
         buffer = PanelList.bufnr,
         noremap = true,
         silent = true,
-        desc = "SwitchPanel: Switch to clicked panel (double-click)"
+        desc = "SwitchPanel: Switch to clicked panel (double-click)",
     })
     
-    log.debug("Mouse handling set up for panel list buffer")
+    log.debug("Mouse handling set up for panel list buffer with high priority")
 end
 
 ---Creates and configures the panel list buffer
