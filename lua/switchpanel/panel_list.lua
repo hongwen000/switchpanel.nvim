@@ -144,6 +144,12 @@ function PanelList.setup_autocmd()
         silent = true,
         desc = "SwitchPanel: Switch to clicked panel",
     })
+    vim.keymap.set('n', '<M-LeftMouse>', handle_mouse_click, {
+        buffer = PanelList.bufnr,
+        noremap = true,
+        silent = true,
+        desc = "SwitchPanel: Switch to clicked panel",
+    })
     -- Double-click for faster switching with higher priority
     vim.keymap.set('n', '<2-LeftMouse>', handle_mouse_click, {
         buffer = PanelList.bufnr,
@@ -297,7 +303,9 @@ function PanelList.open()
         cmd("wincmd H")
         
         PanelList.winnr = api.nvim_get_current_win()
-        api.nvim_win_set_width(0, 2)
+        -- 从配置中获取面板列表宽度，确保有足够空间显示图标
+        local panel_width = require("switchpanel").ops.panel_list.width or 4
+        api.nvim_win_set_width(0, panel_width)
 
         PanelList.setup_highlights()
 

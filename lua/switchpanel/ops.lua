@@ -79,6 +79,7 @@ function Config.get_ops(options)
             background = "Blue",
             selected = "LightBlue",
             color = "none",
+            width = 4,
         },
 
         width = 30,
