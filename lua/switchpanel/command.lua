@@ -1,26 +1,35 @@
-vim.api.nvim_create_user_command("SwitchPanelSwitch", function(arg)
-	require("switchpanel.panel").switch(tonumber(arg.args))
+-- SwitchPanel command definitions
+
+-- Local references
+local api = vim.api
+local Panel = require("switchpanel.panel")
+local PanelList = require("switchpanel.panel_list")
+
+-- Create user commands
+api.nvim_create_user_command("SwitchPanelSwitch", function(arg)
+    Panel.switch(tonumber(arg.args) or 1)
 end, { nargs = "?" })
 
-vim.api.nvim_create_user_command("SwitchPanelNext", function(arg)
-	require("switchpanel.panel").tabnext()
+api.nvim_create_user_command("SwitchPanelNext", function(_)
+    Panel.tabnext()
 end, {})
 
-vim.api.nvim_create_user_command("SwitchPanelPrevious", function(arg)
-	require("switchpanel.panel").tabprevious()
+api.nvim_create_user_command("SwitchPanelPrevious", function(_)
+    Panel.tabprevious()
 end, {})
 
-vim.api.nvim_create_user_command("SwitchPanelToggle", function(arg)
-	require("switchpanel.panel").toggle()
+api.nvim_create_user_command("SwitchPanelToggle", function(_)
+    Panel.toggle()
 end, {})
 
-vim.api.nvim_create_user_command("SwitchPanelListOpen", function(arg)
-	require("switchpanel.panel_list").open()
-end, {})
-vim.api.nvim_create_user_command("SwitchPanelListClose", function(arg)
-	require("switchpanel.panel_list").close()
+api.nvim_create_user_command("SwitchPanelListOpen", function(_)
+    PanelList.open()
 end, {})
 
-vim.api.nvim_create_user_command("SwitchPanel", function(arg)
-	require("switchpanel.panel_list").open()
+api.nvim_create_user_command("SwitchPanelListClose", function(_)
+    PanelList.close()
+end, {})
+
+api.nvim_create_user_command("SwitchPanel", function(_)
+    PanelList.open()
 end, {})

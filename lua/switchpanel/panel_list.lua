@@ -1,179 +1,352 @@
-local M = {}
+local PanelList = {}
 
-M.ft = "SwitchPanelList"
+-- Define module constants
+PanelList.FILETYPE = "SwitchPanelList"
 
-local s = require("switchpanel")
+-- Local references
+local api = vim.api
+local fn = vim.fn
+local cmd = vim.cmd
 
-function M.render()
-	local ops = require("switchpanel").ops
-	local lines = {}
-	for _, b in pairs(ops.builtin) do
-		table.insert(lines, " ")
-		table.insert(lines, " " .. b.icon)
-	end
-	for _ = 1, 100 do
-		table.insert(lines, " ")
-	end
-	vim.api.nvim_buf_set_lines(M.bufnr, 0, -1, true, lines)
+-- Get logger
+local logger
+local function get_logger()
+    if not logger then
+        logger = require("switchpanel").logger or require("switchpanel.logger")
+    end
+    return logger
 end
 
-function M.autocmd()
-	vim.api.nvim_create_autocmd("BufEnter", {
-		pattern = "<buffer=" .. M.bufnr .. ">",
-		callback = function()
-			local win = vim.fn.winnr()
-			if M.nofocus then
-				if win == vim.fn.winnr("1h") then
-					vim.cmd("wincmd 10l")
-				else
-					vim.cmd("wincmd p")
-				end
-			end
-		end,
-	})
+---Renders the panel list with icons from configured builtin panels
+---@return boolean success Whether the render was successful
+function PanelList.render()
+    local log = get_logger()
+    local config = require("switchpanel").ops
+    
+    if not PanelList.bufnr then
+        log.error("Cannot render panel list: buffer not created")
+        return false
+    end
+    
+    -- Check if buffer is valid
+    local is_valid = pcall(api.nvim_buf_is_valid, PanelList.bufnr)
+    if not is_valid then
+        log.error("Cannot render panel list: buffer is invalid")
+        return false
+    end
+    
+    local lines = {}
+    
+    -- Validate builtin panels
+    if not config or not config.builtin then
+        log.error("Cannot render panel list: configuration is invalid")
+        return false
+    end
+    
+    -- Generate lines for each panel
+    for i, panel in pairs(config.builtin) do
+        table.insert(lines, " ")
+        local icon = " "
+        if type(panel) == "table" and panel.icon then
+            icon = icon .. panel.icon
+        else
+            icon = icon .. "?"
+            log.warn("Panel at index %d has no icon", i)
+        end
+        table.insert(lines, icon)
+    end
+    
+    -- Add padding
+    for _ = 1, 100 do
+        table.insert(lines, " ")
+    end
+    
+    -- Set buffer lines
+    local ok, err = pcall(function()
+        api.nvim_buf_set_lines(PanelList.bufnr, 0, -1, true, lines)
+    end)
+    
+    if not ok then
+        log.error("Failed to set buffer lines: %s", err)
+        return false
+    end
+    
+    log.debug("Panel list rendered successfully with %d panels", #config.builtin)
+    return true
 end
 
-function M.setbuf()
-	M.bufnr = vim.api.nvim_create_buf(false, false)
-	vim.api.nvim_buf_set_name(M.bufnr, M.ft)
-	M.render()
-
-	local bufopts = {
-		{ name = "swapfile", val = false },
-		{ name = "buftype", val = "nofile" },
-		{ name = "modifiable", val = false },
-		{ name = "filetype", val = M.ft },
-		{ name = "bufhidden", val = "hide" },
-	}
-	for _, opt in ipairs(bufopts) do
-		vim.bo[M.bufnr][opt.name] = opt.val
-	end
+---Sets up autocmd for buffer enter events
+---@return nil
+function PanelList.setup_autocmd()
+    api.nvim_create_autocmd("BufEnter", {
+        pattern = "<buffer=" .. PanelList.bufnr .. ">",
+        callback = function()
+            local win = fn.winnr()
+            if PanelList.nofocus then
+                if win == fn.winnr("1h") then
+                    cmd("wincmd 10l")
+                else
+                    cmd("wincmd p")
+                end
+            end
+        end,
+    })
 end
 
-function M.setwin()
-	vim.cmd("vsp")
-	local winopts = {
-		relativenumber = false,
-		number = false,
-		list = false,
-		winfixwidth = true,
-		winfixheight = true,
-		foldenable = false,
-		spell = false,
-		signcolumn = "no",
-		foldmethod = "manual",
-		foldcolumn = "0",
-		cursorcolumn = false,
-		colorcolumn = "0",
-	}
-	for k, v in pairs(winopts) do
-		vim.api.nvim_win_set_option(0, k, v)
-	end
+---Creates and configures the panel list buffer
+---@return boolean success Whether the buffer was created successfully
+function PanelList.create_buffer()
+    local log = get_logger()
+    
+    -- Create buffer
+    local ok, result = pcall(function()
+        return api.nvim_create_buf(false, false)
+    end)
+    
+    if not ok or not result then
+        log.error("Failed to create panel list buffer: %s", result or "unknown error")
+        vim.notify("Failed to create panel list buffer", vim.log.levels.ERROR)
+        return false
+    end
+    
+    PanelList.bufnr = result
+    
+    -- Set buffer name
+    local name_ok, name_err = pcall(function()
+        api.nvim_buf_set_name(PanelList.bufnr, PanelList.FILETYPE)
+    end)
+    
+    if not name_ok then
+        log.warn("Failed to set buffer name: %s", name_err)
+    end
+    
+    -- Render panel list
+    local render_ok = PanelList.render()
+    if not render_ok then
+        log.warn("Failed to render panel list during buffer creation")
+    end
+
+    -- Set buffer options
+    local buffer_options = {
+        { name = "swapfile", val = false },
+        { name = "buftype", val = "nofile" },
+        { name = "modifiable", val = false },
+        { name = "filetype", val = PanelList.FILETYPE },
+        { name = "bufhidden", val = "hide" },
+    }
+    
+    for _, opt in ipairs(buffer_options) do
+        local opt_ok, opt_err = pcall(function()
+            vim.bo[PanelList.bufnr][opt.name] = opt.val
+        end)
+        
+        if not opt_ok then
+            log.warn("Failed to set buffer option '%s': %s", opt.name, opt_err)
+        end
+    end
+    
+    log.debug("Panel list buffer created successfully")
+    return true
 end
 
-function M.set_win_hi()
-	local ops = require("switchpanel").ops
-	local hi = vim.api.nvim_buf_add_highlight
-	-- Background
-	vim.api.nvim_win_set_option(
-		0,
-		"winhighlight",
-		"Normal:PanelListNormal,EndOfBuffer:PanelList,VertSplit:PanelListVert,SignColumn:PanelList,CursorLine:PanelListSelected"
-	)
-	vim.api.nvim_set_hl(0, "PanelList", {
-		fg = "NONE",
-		bg = ops.panel_list.background,
-	})
-	vim.api.nvim_set_hl(0, "PanelListVert", {
-		fg = ops.panel_list.background,
-		bg = ops.panel_list.background,
-	})
-	-- Selected
-	vim.api.nvim_set_hl(0, "PanelListSelected", {
-		fg = "NONE",
-		bg = ops.panel_list.selected,
-	})
-	-- Icons
-	vim.api.nvim_set_hl(0, "PanelListNormal", {
-		fg = "none",
-		bg = ops.panel_list.background,
-	})
+---Creates and configures the panel list window
+---@return nil
+function PanelList.create_window()
+    cmd("vsp")
+    
+    local window_options = {
+        relativenumber = false,
+        number = false,
+        list = false,
+        winfixwidth = true,
+        winfixheight = true,
+        foldenable = false,
+        spell = false,
+        signcolumn = "no",
+        foldmethod = "manual",
+        foldcolumn = "0",
+        cursorcolumn = false,
+        colorcolumn = "0",
+    }
+    
+    for option, value in pairs(window_options) do
+        api.nvim_win_set_option(0, option, value)
+    end
 end
 
-function M.open()
-	if M.isOpen() then
-		return
-	end
-	if not M.bufnr then
-		M.setbuf()
-	end
-	M.setwin()
-	vim.cmd("buffer " .. M.bufnr)
-	vim.cmd("wincmd H")
-	M.winnr = vim.api.nvim_get_current_win()
-	vim.api.nvim_win_set_width(0, 2)
-
-	M.set_win_hi()
-
-	vim.cmd("wincmd p")
-	M.nofocus = true
-	M.autocmd()
+---Sets up window highlights for the panel list
+---@return nil
+function PanelList.setup_highlights()
+    local config = require("switchpanel").ops
+    
+    -- Set window highlight groups
+    api.nvim_win_set_option(
+        0,
+        "winhighlight",
+        "Normal:PanelListNormal,EndOfBuffer:PanelList,VertSplit:PanelListVert,SignColumn:PanelList,CursorLine:PanelListSelected"
+    )
+    
+    -- Define highlight groups
+    api.nvim_set_hl(0, "PanelList", {
+        fg = "NONE",
+        bg = config.panel_list.background,
+    })
+    
+    api.nvim_set_hl(0, "PanelListVert", {
+        fg = config.panel_list.background,
+        bg = config.panel_list.background,
+    })
+    
+    api.nvim_set_hl(0, "PanelListSelected", {
+        fg = "NONE",
+        bg = config.panel_list.selected,
+    })
+    
+    api.nvim_set_hl(0, "PanelListNormal", {
+        fg = config.panel_list.color or "none",
+        bg = config.panel_list.background,
+    })
 end
 
-function M.close()
-	M.nofocus = false
-	local win = M.getWinByFileType(M.ft)
-	if not win then
-		return
-	end
-	vim.api.nvim_win_close(win, true)
+---Opens the panel list
+---@return boolean success Whether the panel list was opened successfully
+function PanelList.open()
+    local log = get_logger()
+    
+    -- Check if already open
+    if PanelList.is_open() then
+        log.debug("Panel list is already open")
+        return true
+    end
+    
+    -- Create buffer if needed
+    if not PanelList.bufnr then
+        log.debug("Creating new panel list buffer")
+        if not PanelList.create_buffer() then
+            log.error("Failed to create panel list buffer")
+            return false
+        end
+    end
+    
+    -- Create window and set up panel list
+    local ok, err = pcall(function()
+        PanelList.create_window()
+        cmd("buffer " .. PanelList.bufnr)
+        cmd("wincmd H")
+        
+        PanelList.winnr = api.nvim_get_current_win()
+        api.nvim_win_set_width(0, 2)
+
+        PanelList.setup_highlights()
+
+        cmd("wincmd p")
+        PanelList.nofocus = true
+        PanelList.setup_autocmd()
+    end)
+    
+    if not ok then
+        log.error("Failed to open panel list: %s", err)
+        vim.notify("Failed to open panel list: " .. err, vim.log.levels.ERROR)
+        return false
+    end
+    
+    log.debug("Panel list opened successfully")
+    return true
 end
 
-function M.setCursor()
-	local ops = require("switchpanel").ops
-	local win = M.getWinByFileType(M.ft)
-	local active = M.getActive()
-	assert(active)
-	M.nofocus = false
-	vim.api.nvim_win_set_cursor(win, { active.count * 2, 1 })
-	vim.api.nvim_win_set_width(active.win, ops.width)
-	if ops.focus_on_open then
-		--  TODO: 
-		vim.cmd("wincmd 10h")
-		vim.cmd("wincmd l")
-	else
-		--  TODO: 
-		vim.cmd("wincmd 10h")
-		vim.cmd("wincmd 2l")
-	end
-	M.nofocus = true
+---Closes the panel list
+---@return boolean success Whether the panel list was closed successfully
+function PanelList.close()
+    local log = get_logger()
+    
+    PanelList.nofocus = false
+    local win = PanelList.get_window_by_filetype(PanelList.FILETYPE)
+    
+    if not win then
+        log.debug("No panel list window to close")
+        return true
+    end
+    
+    -- Close window
+    local ok, err = pcall(function()
+        api.nvim_win_close(win, true)
+    end)
+    
+    if not ok then
+        log.error("Failed to close panel list window: %s", err)
+        return false
+    end
+    
+    log.debug("Panel list closed successfully")
+    return true
 end
 
-function M.getActive()
-	local ops = require("switchpanel").ops
-	local count = 0
-	for key, builtin in pairs(ops.builtin) do
-		count = count + 1
-		local win, bufnr = M.getWinByFileType(builtin.filetype)
-		if win then
-			return { count = count, builtin = builtin, win=win, bufnr=bufnr }
-		end
-	end
-	return false
+---Sets the cursor position in the panel list
+---@return nil
+function PanelList.set_cursor()
+    local config = require("switchpanel").ops
+    local win = PanelList.get_window_by_filetype(PanelList.FILETYPE)
+    local active = PanelList.get_active_panel()
+    
+    if not active then
+        vim.notify("No active panel found", vim.log.levels.WARN)
+        return
+    end
+    
+    PanelList.nofocus = false
+    api.nvim_win_set_cursor(win, { active.count * 2, 1 })
+    api.nvim_win_set_width(active.win, config.width)
+    
+    if config.focus_on_open then
+        cmd("wincmd 10h")
+        cmd("wincmd l")
+    else
+        cmd("wincmd 10h")
+        cmd("wincmd 2l")
+    end
+    
+    PanelList.nofocus = true
 end
 
-function M.getWinByFileType(filetype)
-	for _, win in pairs(vim.api.nvim_list_wins()) do
-		local bufnr = vim.api.nvim_win_get_buf(win)
-		local win_filetype = vim.bo[bufnr].filetype
-		if filetype == win_filetype then
-			return win, bufnr
-		end
-	end
-	return nil
+---Gets the currently active panel
+---@return table|nil The active panel information or nil if none is active
+function PanelList.get_active_panel()
+    local config = require("switchpanel").ops
+    local count = 0
+    
+    for _, panel in pairs(config.builtin) do
+        count = count + 1
+        local win, bufnr = PanelList.get_window_by_filetype(panel.filetype)
+        
+        if win then
+            return { count = count, builtin = panel, win = win, bufnr = bufnr }
+        end
+    end
+    
+    return nil
 end
 
-function M.isOpen()
-	return M.getWinByFileType(M.ft)
+---Gets a window by its filetype
+---@param filetype string The filetype to search for
+---@return number|nil win The window handle or nil if not found
+---@return number|nil bufnr The buffer number or nil if not found
+function PanelList.get_window_by_filetype(filetype)
+    for _, win in pairs(api.nvim_list_wins()) do
+        local bufnr = api.nvim_win_get_buf(win)
+        local win_filetype = vim.bo[bufnr].filetype
+        
+        if filetype == win_filetype then
+            return win, bufnr
+        end
+    end
+    
+    return nil
 end
-return M
+
+---Checks if the panel list is currently open
+---@return boolean True if the panel list is open, false otherwise
+function PanelList.is_open()
+    return PanelList.get_window_by_filetype(PanelList.FILETYPE) ~= nil
+end
+
+return PanelList

@@ -1,73 +1,57 @@
-local M = {}
+local Utils = {}
 
-function M.to_regexp(regrep)
-	regrep = string.gsub(regrep, "%[", "%%[")
-	regrep = string.gsub(regrep, "%]", "%%]")
-	regrep = string.gsub(regrep, "<.*>", "(.*)")
-	return regrep
+---Converts a string to a regular expression pattern
+---@param pattern string The string to convert
+---@return string The converted regular expression pattern
+function Utils.to_regexp(pattern)
+    pattern = string.gsub(pattern, "%[", "%%[")
+    pattern = string.gsub(pattern, "%]", "%%]")
+    pattern = string.gsub(pattern, "<.*>", "(.*)")
+    return pattern
 end
 
-function M.deepcopy(orig)
-	local orig_type = type(orig)
-	local copy
-	if orig_type == "table" then
-		-- tableなら再帰でコピー
-		copy = {}
-		for orig_key, orig_value in next, orig, nil do
-			copy[M.deepcopy(orig_key)] = M.deepcopy(orig_value)
-		end
-		setmetatable(copy, M.deepcopy(getmetatable(orig)))
-	else
-		-- number, string, booleanなどはそのままコピー
-		copy = orig
-	end
-	return copy
+---Creates a deep copy of a table
+---@param orig any The original value to copy
+---@return any A deep copy of the original value
+function Utils.deepcopy(orig)
+    local orig_type = type(orig)
+    local copy
+    
+    if orig_type == "table" then
+        copy = {}
+        for orig_key, orig_value in next, orig, nil do
+            copy[Utils.deepcopy(orig_key)] = Utils.deepcopy(orig_value)
+        end
+        setmetatable(copy, Utils.deepcopy(getmetatable(orig)))
+    else
+        -- For primitive types, copy directly
+        copy = orig
+    end
+    
+    return copy
 end
 
-function M.tableMerge(t1, t2)
-	for k, v in pairs(t2) do
-		if type(v) == "table" then
-			if type(t1[k] or false) == "table" then
-				M.tableMerge(t1[k] or {}, t2[k] or {})
-			else
-				t1[k] = v
-			end
-		else
-			t1[k] = v
-		end
-	end
-	return t1
+---Merges two tables recursively
+---@param t1 table The first table
+---@param t2 table The second table
+---@return table The merged table
+function Utils.tableMerge(t1, t2)
+    local result = Utils.deepcopy(t1)
+    
+    for k, v in pairs(t2) do
+        if type(v) == "table" then
+            if type(result[k] or false) == "table" then
+                result[k] = Utils.tableMerge(result[k] or {}, v)
+            else
+                result[k] = Utils.deepcopy(v)
+            end
+        else
+            result[k] = v
+        end
+    end
+    
+    return result
 end
 
-function M.TableConcat(t1, t2)
-	for i = 1, #t2 do
-		t1[#t1 + 1] = t2[i]
-	end
-	return t1
-end
-
-function M.split(str, seq)
-	local tab = {}
-	while str ~= "" do
-		local fc = string.find(str, seq)
-		if fc == nil then
-			table.insert(tab, str)
-			break
-		end
-		table.insert(tab, str.sub(str, 1, fc - 1))
-		str = string.sub(str, fc + #seq)
-	end
-	return tab
-end
-
-function M.includes(tab, str)
-	for i in pairs(tab) do
-		if tab[i] == str then
-			return true
-		end
-	end
-	return false
-end
-
-return M
+return Utils
 

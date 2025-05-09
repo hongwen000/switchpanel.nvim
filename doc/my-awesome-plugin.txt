@@ -1,78 +1,118 @@
-*my-awesome-plugin.txt*  An awesome plugin that greets you :)
+*switchpanel.nvim*  A plugin to display and switch between NeoVim sidebars
 
 ==============================================================================
-CONTENTS                                          *my-awesome-plugin-contents*
+CONTENTS                                          *switchpanel-contents*
 
-    1. Introduction ......................... |my-awesome-plugin-introduction|
-    2. Setup ................................ |my-awesome-plugin-setup|
-    3. Commands ............................. |my-awesome-plugin-commands|
-    4. API .................................. |my-awesome-plugin-api|
-
-==============================================================================
-1. INTRODUCTION                               *my-awesome-plugin-introduction*
-
-my-awesome-plugin makes Neovim, your favorite text editor, capable of greeting
-you. See bellow how it works:
-
-                +--------------+              +--------------+
-                |              |              |              |
-                |              |              |              |
-                |              |              |              |
-                |    Hello     | -----------> |  [your-name] |
-                |              |              |              |
-                |              |              |              |
-                +--------------+              +--------------+
+    1. Introduction ......................... |switchpanel-introduction|
+    2. Setup ................................ |switchpanel-setup|
+    3. Commands ............................. |switchpanel-commands|
+    4. Configuration ........................ |switchpanel-configuration|
+    5. Builtin Panels ....................... |switchpanel-builtin-panels|
 
 ==============================================================================
-2. SETUP                                             *my-awesome-plugin-setup*
+1. INTRODUCTION                               *switchpanel-introduction*
 
-Make sure to add to call the setup function with the proper configuration on
-your `init` file.
-
-If you use `init.vim`: >
-
-    lua require('my_awesome_plugin').setup { name = 'Alexander, The Great'}
-
-
-Or, if you use `init.lua`: >
-
-    require('my_awesome_plugin').setup { name = 'Alexander, The Great'}
+SwitchPanel.nvim integrates a plugin to display NeoVim sidebars and switch
+between them like a VSCode sidebar. It provides a unified interface for
+managing multiple sidebar panels such as file explorers, symbol outlines,
+and more.
 
 ==============================================================================
-3. COMMANDS                                       *my-awesome-plugin-commands*
+2. SETUP                                             *switchpanel-setup*
 
-:MyAwesomePluginGenericGreet                     *MyAwesomePluginGenericGreet*
+Using packer:
+>
+    use({
+        "arakkkkk/switchpanel.nvim",
+        config = function()
+            require("switchpanel").setup({})
+        end,
+    })
+<
 
-Shows a generic greet message.
-
-:MyAwesomePluginGreet                                   *MyAwesomePluginGreet*
-
-Shows a personalized, accordingly to the setup configuration, greet message.
-
-==============================================================================
-4. API                                                 *my-awesome-plugin-api*
-
-
-my_awesome_plugin.setup({config})                  *my_awesome_plugin.setup()*
-        Configures this plugin. Currently supported configuration variables
-        are:
-        • `name`: a string to be used in the greet message
-
-        Parameters: ~
-            {config}(required, table) Table of values; keys are as listed
-                above. Accept defaults by omitting the relevant key.
-
-my_awesome_plugin.is_configured()          *my_awesome_plugin.is_configured()*
-        Tell if the plugin is configured.
-        Return: ~
-            true/false
-
-my_awesome_plugin.greet()                          *my_awesome_plugin.greet()*
-        Show a greeting message. If the plugin was previously configured with
-        |my_awesome_plugin.setup()|, show a personalized message.
-
-my_awesome_plugin.generic_greet()          *my_awesome_plugin.generic_greet()*
-        Show a generic greeting message.
+Or with a custom configuration:
+>
+    require("switchpanel").setup({
+        panel_list = {
+            show = true,
+            background = "Blue",
+            selected = "LightBlue",
+            color = "none",
+        },
+        width = 30,
+        focus_on_open = true,
+        tab_repeat = true,
+    })
+<
 
 ==============================================================================
-vim:tw=78:ts=8:ft=help:norl:noet:fen:noet:
+3. COMMANDS                                       *switchpanel-commands*
+
+:SwitchPanelSwitch [number]                         *SwitchPanelSwitch*
+    Switch to the panel with the specified number. If no number is provided,
+    defaults to 1.
+
+:SwitchPanelNext                                    *SwitchPanelNext*
+    Switch to the next panel in the list.
+
+:SwitchPanelPrevious                                *SwitchPanelPrevious*
+    Switch to the previous panel in the list.
+
+:SwitchPanelToggle                                  *SwitchPanelToggle*
+    Toggle the current panel (open if closed, close if open).
+
+:SwitchPanelListOpen                                *SwitchPanelListOpen*
+    Open the panel list sidebar.
+
+:SwitchPanelListClose                               *SwitchPanelListClose*
+    Close the panel list sidebar.
+
+:SwitchPanel                                        *SwitchPanel*
+    Alias for SwitchPanelListOpen.
+
+==============================================================================
+4. CONFIGURATION                                *switchpanel-configuration*
+
+SwitchPanel.nvim can be configured with the following options:
+>
+    {
+        panel_list = {
+            show = true,            -- Show the panel list
+            background = "Blue",    -- Background color
+            selected = "LightBlue", -- Selected item color
+            color = "none",         -- Text color
+        },
+
+        width = 30,                -- Width of panels when opened
+
+        focus_on_open = true,      -- Focus panel when opened
+
+        tab_repeat = true,         -- Cycle through panels
+        
+        mappings = {              -- Key mappings in panel windows
+            {"1", "SwitchPanelSwitch 1" },
+            {"2", "SwitchPanelSwitch 2" },
+            {"3", "SwitchPanelSwitch 3" },
+            {"J", "SwitchPanelNext" },
+            {"K", "SwitchPanelPrevious" },
+        },
+
+        builtin = {               -- Enabled builtin panels
+            "nvim-tree.lua",
+            "sidebar.nvim",
+            "undotree",
+        }
+    }
+<
+
+==============================================================================
+5. BUILTIN PANELS                              *switchpanel-builtin-panels*
+
+SwitchPanel.nvim supports the following builtin panels:
+
+- nvim-tree.lua: File explorer
+- sidebar.nvim: Multi-component sidebar
+- undotree: Undo history visualizer
+- aerial.nvim: Code outline and symbol navigator
+
+You can specify which panels to enable in the configuration.

@@ -1,19 +1,39 @@
-local ops = require("switchpanel").ops
+-- SwitchPanel autocommands
 
-vim.api.nvim_create_autocmd("BufEnter", {
-	pattern = "*",
-	callback = function()
-		for _, builtin in pairs(ops.builtin) do
-			local filetype = builtin.filetype
-			if vim.bo.filetype == filetype then
-				for _, keymap in pairs(ops.mappings) do
-					local cmd = keymap[2]
-					if type(keymap[2]) == "string" then
-						cmd = "<cmd>" .. keymap[2] .. "<cr>"
-					end
-					vim.keymap.set("n", keymap[1], cmd, { silent = true, buffer = vim.api.nvim_get_current_buf() })
-				end
-			end
-		end
-	end,
-})
+-- Local references
+local api = vim.api
+
+---Sets up autocommands for SwitchPanel
+---@return nil
+local function setup_autocommands()
+    local config = require("switchpanel").ops
+    
+    api.nvim_create_autocmd("BufEnter", {
+        pattern = "*",
+        callback = function()
+            for _, panel in pairs(config.builtin) do
+                local filetype = panel.filetype
+                
+                if vim.bo.filetype == filetype then
+                    for _, keymap in pairs(config.mappings) do
+                        local cmd = keymap[2]
+                        
+                        if type(cmd) == "string" then
+                            cmd = "<cmd>" .. cmd .. "<cr>"
+                        end
+                        
+                        vim.keymap.set(
+                            "n", 
+                            keymap[1], 
+                            cmd, 
+                            { silent = true, buffer = api.nvim_get_current_buf() }
+                        )
+                    end
+                end
+            end
+        end,
+    })
+end
+
+-- Initialize autocommands
+setup_autocommands()

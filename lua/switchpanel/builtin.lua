@@ -1,37 +1,36 @@
+-- Builtin panel configurations
+
+---@type table<string, table>
 return {
-
-	["aerial.nvim"] = {
-		open = "AerialOpen",
-		close = "AerialClose",
+    ["aerial.nvim"] = {
+        open = "AerialOpen",
+        close = "AerialClose",
 		icon = "",
-		filetype = "aerial",
-		option = {},
-	},
+        filetype = "aerial",
+        option = {},
+    },
 
-	["nvim-tree.lua"] = {
-		open = "NvimTreeOpen",
-		close = "NvimTreeClose",
-		filetype = "NvimTree",
+    ["nvim-tree.lua"] = {
+        open = "NvimTreeOpen",
+        close = "NvimTreeClose",
+        filetype = "NvimTree",
 		icon = "",
-		option = {},
-	},
+        option = {},
+    },
 
-	["sidebar.nvim"] = {
-		open = "SidebarNvimOpen",
-		close = "SidebarNvimClose",
-		filetype = "SidebarNvim",
+    ["sidebar.nvim"] = {
+        open = "SidebarNvimOpen",
+        close = "SidebarNvimClose",
+        filetype = "SidebarNvim",
 		icon = "",
-		option = {},
-	},
+        option = {},
+    },
 
-	["undotree"] = {
-		open = "UndotreeShow",
-		close = "UndotreeHide",
-		filetype = "undotree",
+    ["undotree"] = {
+        open = "UndotreeShow",
+        close = "UndotreeHide",
+        filetype = "undotree",
 		icon = "",
-		option = {},
-	},
-
+        option = {},
+    },
 }
---   ﱮ    הּ  פּ  﨧ﲵ               
--- 
