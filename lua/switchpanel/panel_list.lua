@@ -78,6 +78,8 @@ end
 ---Sets up autocmd for buffer enter events and mouse click handling
 ---@return nil
 function PanelList.setup_autocmd()
+    local log = get_logger()
+    
     -- Buffer enter event handling
     api.nvim_create_autocmd("BufEnter", {
         pattern = "<buffer=" .. PanelList.bufnr .. ">",
@@ -93,8 +95,7 @@ function PanelList.setup_autocmd()
         end,
     })
     
-    -- Mouse click event handling
-    api.nvim_buf_set_option(PanelList.bufnr, "mousemovemsg", "")
+    -- ModeChanged event handling for buffer options
     api.nvim_create_autocmd("ModeChanged", {
         pattern = "*",
         callback = function()
@@ -105,16 +106,16 @@ function PanelList.setup_autocmd()
         end,
     })
     
-    -- Handle mouse clicks on panel icons
-    api.nvim_create_autocmd("MouseDown", {
-        pattern = "<buffer=" .. PanelList.bufnr .. ">",
-        callback = function()
-            local log = get_logger()
-            local mouse_pos = api.nvim_win_get_cursor(0)
-            local row = mouse_pos[1]
+    -- Proper mouse click handling with keymaps
+    local function handle_mouse_click()
+        local pos = vim.fn.getmousepos()
+        
+        -- Check if the click is in our panel list window
+        if pos.winid == PanelList.winnr then
+            local row = pos.line
             
             -- Calculate panel index from row (every other row has an icon)
-            if row % 2 == 0 then  -- Even rows have icons
+            if row % 2 == 0 then -- Even rows have icons
                 local panel_index = row / 2
                 log.debug("Mouse click detected on panel %d", panel_index)
                 
@@ -126,8 +127,26 @@ function PanelList.setup_autocmd()
                     log.warn("Failed to switch to panel %d via mouse click", panel_index)
                 end
             end
-        end,
+        end
+    end
+    
+    -- Set up left mouse click mapping for the panel list buffer
+    vim.keymap.set('n', '<LeftMouse>', handle_mouse_click, {
+        buffer = PanelList.bufnr,
+        noremap = true,
+        silent = true,
+        desc = "SwitchPanel: Switch to clicked panel"
     })
+    
+    -- Double-click for faster switching
+    vim.keymap.set('n', '<2-LeftMouse>', handle_mouse_click, {
+        buffer = PanelList.bufnr,
+        noremap = true,
+        silent = true,
+        desc = "SwitchPanel: Switch to clicked panel (double-click)"
+    })
+    
+    log.debug("Mouse handling set up for panel list buffer")
 end
 
 ---Creates and configures the panel list buffer
