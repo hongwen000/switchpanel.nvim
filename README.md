@@ -1,6 +1,6 @@
 # SwitchPanel.nvim
 
-Integrate a plugin to display NeoVim sidebars and switch between them like a VSCode sidebar. Now with improved error handling and debugging capabilities.
+Integrate a plugin to display NeoVim sidebars and switch between them like a VSCode sidebar. Now with improved error handling, mouse support, and debugging capabilities.
 
 ## Demo
 ![img](doc/demo.gif)
@@ -110,11 +110,29 @@ require("switchpanel").setup({
 })
 ```
 
-## Debugging and Error Handling
+## Features
 
-SwitchPanel.nvim now includes comprehensive error handling and debugging capabilities to help troubleshoot issues:
+### Mouse Support
 
-- **Robust Error Handling**: All operations now include proper error checking and recovery
+SwitchPanel.nvim now supports mouse interactions:
+
+- **Click to Switch**: Click on panel icons in the sidebar to switch between panels
+- **Intuitive Navigation**: Easily navigate between panels using either keyboard shortcuts or mouse clicks
+
+### Improved Error Handling
+
+SwitchPanel.nvim includes enhanced error handling for plugin management:
+
+- **Missing Plugin Detection**: Gracefully handles missing or not-yet-loaded plugins
+- **Lazy Loading Support**: Compatible with lazy-loaded plugins, avoiding errors when plugins aren't available
+- **Smart Panel Switching**: When navigating with Next/Previous, automatically skips unavailable panels
+- **Informative Messages**: Provides helpful notifications instead of error messages
+
+### Debugging Capabilities
+
+Comprehensive error handling and debugging tools to help troubleshoot issues:
+
+- **Robust Error Handling**: All operations include proper error checking and recovery
 - **Detailed Logging**: Configure log levels from DEBUG to ERROR to control verbosity
 - **Log to File**: Optionally save logs to a file for persistent debugging
 - **Dependency Validation**: Automatic checking of required Neovim API features

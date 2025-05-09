@@ -75,9 +75,10 @@ function PanelList.render()
     return true
 end
 
----Sets up autocmd for buffer enter events
+---Sets up autocmd for buffer enter events and mouse click handling
 ---@return nil
 function PanelList.setup_autocmd()
+    -- Buffer enter event handling
     api.nvim_create_autocmd("BufEnter", {
         pattern = "<buffer=" .. PanelList.bufnr .. ">",
         callback = function()
@@ -87,6 +88,42 @@ function PanelList.setup_autocmd()
                     cmd("wincmd 10l")
                 else
                     cmd("wincmd p")
+                end
+            end
+        end,
+    })
+    
+    -- Mouse click event handling
+    api.nvim_buf_set_option(PanelList.bufnr, "mousemovemsg", "")
+    api.nvim_create_autocmd("ModeChanged", {
+        pattern = "*",
+        callback = function()
+            if api.nvim_get_current_buf() == PanelList.bufnr then
+                api.nvim_buf_set_option(PanelList.bufnr, "modifiable", true)
+                api.nvim_buf_set_option(PanelList.bufnr, "modifiable", false)
+            end
+        end,
+    })
+    
+    -- Handle mouse clicks on panel icons
+    api.nvim_create_autocmd("MouseDown", {
+        pattern = "<buffer=" .. PanelList.bufnr .. ">",
+        callback = function()
+            local log = get_logger()
+            local mouse_pos = api.nvim_win_get_cursor(0)
+            local row = mouse_pos[1]
+            
+            -- Calculate panel index from row (every other row has an icon)
+            if row % 2 == 0 then  -- Even rows have icons
+                local panel_index = row / 2
+                log.debug("Mouse click detected on panel %d", panel_index)
+                
+                -- Switch to the clicked panel
+                local Panel = require("switchpanel.panel")
+                local success = Panel.switch(panel_index)
+                
+                if not success then
+                    log.warn("Failed to switch to panel %d via mouse click", panel_index)
                 end
             end
         end,

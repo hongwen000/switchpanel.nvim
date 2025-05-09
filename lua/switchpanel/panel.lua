@@ -109,48 +109,62 @@ function Panel.tabnext()
         return false
     end
     
-    -- Calculate next panel index
-    local next_tabnr
-    if Panel.tabnr == #config.builtin then
-        if not config.tab_repeat then
-            log.debug("Already at last panel and tab_repeat is disabled")
-            return false
-        end
-        next_tabnr = 1
-        log.debug("Wrapping around to first panel")
-    else
-        next_tabnr = Panel.tabnr + 1
-    end
-    
-    -- Check if next panel exists and is valid
-    local next_panel = config.builtin[next_tabnr]
-    if not next_panel then
-        log.error("Next panel at index %d not found", next_tabnr)
-        return false
-    end
-    
-    local is_valid, err_msg = validate_panel(next_panel)
-    if not is_valid then
-        log.error("Invalid next panel configuration: %s", err_msg)
-        return false
-    end
-    
     -- Close current panel
     local close_success = Panel.close(Panel.active)
     if not close_success then
         log.warn("Failed to close active panel before switching to next")
     end
     
-    -- Open next panel
-    local open_success = Panel.open(next_panel)
-    if open_success then
-        Panel.tabnr = next_tabnr
-        log.debug("Switched to next panel %d", next_tabnr)
-        return true
-    else
-        log.error("Failed to open next panel %d", next_tabnr)
-        return false
+    -- Try to find a valid next panel
+    local max_attempts = #config.builtin
+    local attempts = 0
+    local next_tabnr = Panel.tabnr
+    local open_success = false
+    
+    while attempts < max_attempts do
+        -- Calculate next panel index
+        if next_tabnr == #config.builtin then
+            if not config.tab_repeat then
+                log.debug("Already at last panel and tab_repeat is disabled")
+                return false
+            end
+            next_tabnr = 1
+            log.debug("Wrapping around to first panel")
+        else
+            next_tabnr = next_tabnr + 1
+        end
+        
+        attempts = attempts + 1
+        
+        -- Check if next panel exists and is valid
+        local next_panel = config.builtin[next_tabnr]
+        if not next_panel then
+            log.warn("Next panel at index %d not found, trying next", next_tabnr)
+            goto continue
+        end
+        
+        local is_valid, err_msg = validate_panel(next_panel)
+        if not is_valid then
+            log.warn("Invalid next panel configuration: %s, trying next", err_msg)
+            goto continue
+        end
+        
+        -- Try to open the panel
+        open_success = Panel.open(next_panel)
+        if open_success then
+            Panel.tabnr = next_tabnr
+            log.debug("Switched to next panel %d", next_tabnr)
+            return true
+        else
+            log.warn("Failed to open panel %d, trying next", next_tabnr)
+        end
+        
+        ::continue::
     end
+    
+    log.error("Failed to open next panel after %d attempts", attempts)
+    vim.notify("SwitchPanel: No available panels found", vim.log.levels.WARN)
+    return false
 end
 
 ---Switches to the previous panel
@@ -165,48 +179,62 @@ function Panel.tabprevious()
         return false
     end
     
-    -- Calculate previous panel index
-    local prev_tabnr
-    if Panel.tabnr == 1 then
-        if not config.tab_repeat then
-            log.debug("Already at first panel and tab_repeat is disabled")
-            return false
-        end
-        prev_tabnr = #config.builtin
-        log.debug("Wrapping around to last panel")
-    else
-        prev_tabnr = Panel.tabnr - 1
-    end
-    
-    -- Check if previous panel exists and is valid
-    local prev_panel = config.builtin[prev_tabnr]
-    if not prev_panel then
-        log.error("Previous panel at index %d not found", prev_tabnr)
-        return false
-    end
-    
-    local is_valid, err_msg = validate_panel(prev_panel)
-    if not is_valid then
-        log.error("Invalid previous panel configuration: %s", err_msg)
-        return false
-    end
-    
     -- Close current panel
     local close_success = Panel.close(Panel.active)
     if not close_success then
         log.warn("Failed to close active panel before switching to previous")
     end
     
-    -- Open previous panel
-    local open_success = Panel.open(prev_panel)
-    if open_success then
-        Panel.tabnr = prev_tabnr
-        log.debug("Switched to previous panel %d", prev_tabnr)
-        return true
-    else
-        log.error("Failed to open previous panel %d", prev_tabnr)
-        return false
+    -- Try to find a valid previous panel
+    local max_attempts = #config.builtin
+    local attempts = 0
+    local prev_tabnr = Panel.tabnr
+    local open_success = false
+    
+    while attempts < max_attempts do
+        -- Calculate previous panel index
+        if prev_tabnr == 1 then
+            if not config.tab_repeat then
+                log.debug("Already at first panel and tab_repeat is disabled")
+                return false
+            end
+            prev_tabnr = #config.builtin
+            log.debug("Wrapping around to last panel")
+        else
+            prev_tabnr = prev_tabnr - 1
+        end
+        
+        attempts = attempts + 1
+        
+        -- Check if previous panel exists and is valid
+        local prev_panel = config.builtin[prev_tabnr]
+        if not prev_panel then
+            log.warn("Previous panel at index %d not found, trying next", prev_tabnr)
+            goto continue
+        end
+        
+        local is_valid, err_msg = validate_panel(prev_panel)
+        if not is_valid then
+            log.warn("Invalid previous panel configuration: %s, trying next", err_msg)
+            goto continue
+        end
+        
+        -- Try to open the panel
+        open_success = Panel.open(prev_panel)
+        if open_success then
+            Panel.tabnr = prev_tabnr
+            log.debug("Switched to previous panel %d", prev_tabnr)
+            return true
+        else
+            log.warn("Failed to open panel %d, trying next", prev_tabnr)
+        end
+        
+        ::continue::
     end
+    
+    log.error("Failed to open previous panel after %d attempts", attempts)
+    vim.notify("SwitchPanel: No available panels found", vim.log.levels.WARN)
+    return false
 end
 
 ---Toggles the current panel
@@ -291,6 +319,33 @@ function Panel.open(panel)
     if not is_valid then
         log.error("Cannot open invalid panel: %s", err_msg)
         vim.notify("SwitchPanel: Invalid panel configuration", vim.log.levels.ERROR)
+        return false
+    end
+    
+    -- Check if the panel command exists before executing
+    local command_exists = true
+    local command_name = panel.open:match("^(%S+)")
+    
+    if command_name then
+        -- Try to check if the command exists
+        local cmd_exists, _ = pcall(function()
+            return vim.api.nvim_get_commands({})[""][""][command_name] ~= nil
+        end)
+        
+        if not cmd_exists then
+            -- Try alternative method to check command existence
+            cmd_exists = pcall(function() 
+                vim.cmd("silent! command " .. command_name)
+                return vim.fn.exists(":" .. command_name) == 2
+            end)
+        end
+        
+        command_exists = cmd_exists
+    end
+    
+    if not command_exists then
+        log.warn("Panel command '%s' not found - plugin may not be installed or loaded", command_name or panel.open)
+        vim.notify("SwitchPanel: Panel '" .. (panel.filetype or "") .. "' not available - plugin may not be installed or loaded", vim.log.levels.WARN)
         return false
     end
     
